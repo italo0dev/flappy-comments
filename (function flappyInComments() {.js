@@ -1,4 +1,4 @@
-(function flappyInComments() {
+(function spaceInvadersInComments() {
   const container = document.querySelector('ytd-comments#comments');
   if (!container) return alert("Comentários não encontrados!");
 
