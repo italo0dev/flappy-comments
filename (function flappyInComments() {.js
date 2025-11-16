@@ -27,19 +27,17 @@
     container.style.height = "300px";
     container.style.overflow = "hidden";
 
-    let birdY = 10;
-    let velocity = 0;
-    const gravity = 0.25;   // QUEDA MAIS SUAVE
-    const jump = -4.5;     // PULO MAIS CONTROLADO
     const columns = 50;
     const rows = 20;
-    const gapSize = 6;
-    const pipes = [];
+    let playerX = Math.floor(columns / 2);
+    let bullets = [];
+    let enemies = [];
     let frame = 0;
 
-    function generatePipe() {
-      const gapStart = Math.floor(Math.random() * (rows - gapSize - 2)) + 1;
-      pipes.push({ x: columns - 1, gapStart });
+      function generateEnemies() {
+      for (let i = 0; i < columns; i += 5) {
+        enemies.push({ x: i, y: 0 });
+      }
     }
 
     function handleGameOver() {
@@ -48,45 +46,56 @@
       createRestartButton(() => startGame());
     }
 
-    document.onkeydown = e => {
-      if (["Space", "ArrowUp", "ArrowRight", "ArrowLeft"].includes(e.code)) {
-        velocity = jump;
-      }
+     document.onkeydown = e => {
+      if (e.code === "ArrowLeft") playerX = Math.max(0, playerX - 1);
+      if (e.code === "ArrowRight") playerX = Math.min(columns - 1, playerX + 1);
+      if (e.code === "Space") bullets.push({ x: playerX, y: rows - 2 });
     };
 
+     generateEnemies();
+
     const gameLoop = setInterval(() => {
-      velocity += gravity;
-      birdY += velocity;
-      birdY = Math.max(0, Math.min(rows - 1, birdY));
+      frame++;
 
-      if (frame % 20 === 0) generatePipe();
-      pipes.forEach(p => p.x--);
-      if (pipes.length > 0 && pipes[0].x < -1) pipes.shift();
+      // Move bullets
+      bullets = bullets.map(b => ({ x: b.x, y: b.y - 1 })).filter(b => b.y >= 0);
 
-      if (pipes.some(p =>
-        p.x === 5 &&
-        (Math.floor(birdY) < p.gapStart || Math.floor(birdY) > p.gapStart + gapSize)
-      )) {
+      // Move enemies
+      if (frame % 10 === 0) {
+        enemies = enemies.map(e => ({ x: e.x, y: e.y + 1 }));
+      }
+
+      // Check collisions
+      bullets.forEach(b => {
+        enemies.forEach((e, i) => {
+          if (b.x === e.x && b.y === e.y) {
+            enemies.splice(i, 1);
+            b.y = -1; // remove bullet
+          }
+        });
+      });
+
+      // Check if enemies reached bottom
+      if (enemies.some(e => e.y >= rows - 1)) {
         handleGameOver();
         return;
       }
 
+      // Draw screen
       let screen = "";
       for (let y = 0; y < rows; y++) {
         let row = "";
         for (let x = 0; x < columns; x++) {
-          if (Math.floor(birdY) === y && x === 5) row += "🐤";
-          else {
-            const p = pipes.find(p => p.x === x);
-            row += p && (y < p.gapStart || y > p.gapStart + gapSize) ? "🟩" : " ";
-          }
+          if (y === rows - 1 && x === playerX) row += "🚀";
+          else if (bullets.some(b => b.x === x && b.y === y)) row += "🔺";
+          else if (enemies.some(e => e.x === x && e.y === y)) row += "👾";
+          else row += " ";
         }
         screen += row + "\n";
       }
 
       container.innerHTML = screen;
-      frame++;
-    }, 120); // RITMO MAIS LENTO E SUAVE
+    }, 100);
   }
 
   startGame();
